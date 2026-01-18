@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>全能播放器 - 流媒体示例</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    #video-container {
+      width: 100%;
+      max-width: 800px;
+      height: 450px;
+      margin: 20px auto;
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .controls {
+      margin: 20px 0;
+      text-align: center;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      font-size: 16px;
+      cursor: pointer;
+      border: none;
+      border-radius: 4px;
+      background: #007bff;
+      color: white;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    .info {
+      margin: 20px 0;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 4px;
+    }
+    .format-badge {
+      display: inline-block;
+      padding: 4px 8px;
+      background: #28a745;
+      color: white;
+      border-radius: 4px;
+      font-size: 12px;
+      margin-left: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>全能播放器 - 流媒体示例</h1>
+
+  <div id="video-container"></div>
+
+  <div class="controls">
+    <button onclick="loadHLS()">加载 HLS 流</button>
+    <button onclick="loadDASH()">加载 DASH 流</button>
+    <button onclick="loadMP4()">加载 MP4</button>
+    <button onclick="player.play()">播放</button>
+    <button onclick="player.pause()">暂停</button>
+    <button onclick="player.toggleFullscreen()">全屏</button>
+  </div>
+
+  <div class="info">
+    <h3>播放器信息</h3>
+    <p>当前格式: <span id="format">未加载</span></p>
+    <p>当前时间: <span id="current-time">0</span> 秒</p>
+    <p>总时长: <span id="duration">0</span> 秒</p>
+    <p>音量: <span id="volume">1</span></p>
+    <p>状态: <span id="status">未加载</span></p>
+  </div>
+
+  <script type="module">
+    import { VideoPlayer } from "../src/mod.ts";
+
+    // 创建播放器实例
+    const player = new VideoPlayer({
+      container: "#video-container",
+      autoplay: false,
+      controls: true,
+      hls: {
+        lowLatencyMode: true,
+        enableWorker: true,
+      },
+      dash: {
+        streaming: {
+          delay: {
+            liveDelay: 3,
+          },
+        },
+      },
+    });
+
+    // 加载 HLS 流
+    window.loadHLS = () => {
+      player.loadSource("https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", {
+        hls: { lowLatencyMode: true },
+      });
+    };
+
+    // 加载 DASH 流
+    window.loadDASH = () => {
+      player.loadSource("https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps.mpd", {
+        dash: {
+          streaming: {
+            delay: { liveDelay: 3 },
+          },
+        },
+      });
+    };
+
+    // 加载 MP4
+    window.loadMP4 = () => {
+      player.loadSource("https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4");
+    };
+
+    // 监听事件
+    player.on("play", () => {
+      document.getElementById("status").textContent = "播放中";
+    });
+
+    player.on("pause", () => {
+      document.getElementById("status").textContent = "已暂停";
+    });
+
+    player.on("loadedmetadata", () => {
+      document.getElementById("status").textContent = "已加载";
+      const format = player.getFormat();
+      document.getElementById("format").textContent = format;
+    });
+
+    player.on("timeupdate", () => {
+      const state = player.getState();
+      document.getElementById("current-time").textContent = state.currentTime.toFixed(2);
+      document.getElementById("duration").textContent = state.duration.toFixed(2);
+      document.getElementById("volume").textContent = state.volume.toFixed(2);
+    });
+
+    // 暴露到全局
+    window.player = player;
+  </script>
+</body>
+</html>

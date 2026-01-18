@@ -1,0 +1,55 @@
+{
+  "name": "@dreamer/video-player",
+  "version": "1.0.0-beta.1",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/mod.ts",
+    "./player": "./src/player.ts"
+  },
+  "publish": {
+    "include": [
+      "src/**/*.ts",
+      "LICENSE.md",
+      "README.md"
+    ],
+    "exclude": [
+      "**/*.test.ts",
+      "**/*.spec.ts",
+      "**/test/**",
+      "**/tests/**",
+      "**/examples/**"
+    ]
+  },
+  "lint": {
+    "include": [
+      "src/"
+    ],
+    "rules": {
+      "tags": [
+        "recommended"
+      ],
+      "exclude": [
+        "no-explicit-any"
+      ]
+    }
+  },
+  "imports": {
+    "@dreamer/runtime-adapter": "jsr:@dreamer/runtime-adapter@1.0.0-beta.17",
+    "@dreamer/logger": "jsr:@dreamer/logger@^1.0.0-beta.2",
+    "@dreamer/test": "jsr:@dreamer/test@^1.0.0-beta.13",
+    "@dreamer/esbuild": "jsr:@dreamer/esbuild@^1.0.0-beta.2",
+    "hls.js": "npm:hls.js@^1.4.12",
+    "dashjs": "npm:dashjs@^4.7.4",
+    "flv.js": "npm:flv.js@^1.6.2",
+    "puppeteer": "npm:puppeteer@^24.35.0",
+    "esbuild": "npm:esbuild@^0.24.0"
+  },
+  "nodeModulesDir": "auto",
+  "compilerOptions": {
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ]
+  }
+}

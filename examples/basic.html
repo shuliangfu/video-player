@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>视频播放器 - 基础示例</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    #video-container {
+      width: 100%;
+      max-width: 800px;
+      height: 450px;
+      margin: 20px auto;
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .controls {
+      margin: 20px 0;
+      text-align: center;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      font-size: 16px;
+      cursor: pointer;
+      border: none;
+      border-radius: 4px;
+      background: #007bff;
+      color: white;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    .info {
+      margin: 20px 0;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>视频播放器 - 基础示例</h1>
+
+  <div id="video-container"></div>
+
+  <div class="controls">
+    <button onclick="player.play()">播放</button>
+    <button onclick="player.pause()">暂停</button>
+    <button onclick="player.stop()">停止</button>
+    <button onclick="player.seek(player.currentTime - 10)">后退 10 秒</button>
+    <button onclick="player.seek(player.currentTime + 10)">前进 10 秒</button>
+    <button onclick="player.setVolume(player.volume + 0.1)">音量 +</button>
+    <button onclick="player.setVolume(player.volume - 0.1)">音量 -</button>
+    <button onclick="player.toggleMute()">静音</button>
+    <button onclick="player.toggleFullscreen()">全屏</button>
+  </div>
+
+  <div class="info">
+    <h3>播放器信息</h3>
+    <p>当前时间: <span id="current-time">0</span> 秒</p>
+    <p>总时长: <span id="duration">0</span> 秒</p>
+    <p>音量: <span id="volume">1</span></p>
+    <p>播放速度: <span id="playback-rate">1</span>x</p>
+    <p>状态: <span id="status">未加载</span></p>
+  </div>
+
+  <script type="module">
+    import { VideoPlayer } from "../src/mod.ts";
+
+    // 创建播放器实例
+    const player = new VideoPlayer({
+      container: "#video-container",
+      src: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+      autoplay: false,
+      controls: true,
+    });
+
+    // 监听事件
+    player.on("play", () => {
+      document.getElementById("status").textContent = "播放中";
+      console.log("开始播放");
+    });
+
+    player.on("pause", () => {
+      document.getElementById("status").textContent = "已暂停";
+      console.log("暂停播放");
+    });
+
+    player.on("ended", () => {
+      document.getElementById("status").textContent = "播放结束";
+      console.log("播放结束");
+    });
+
+    player.on("timeupdate", () => {
+      const state = player.getState();
+      document.getElementById("current-time").textContent = state.currentTime.toFixed(2);
+      document.getElementById("duration").textContent = state.duration.toFixed(2);
+      document.getElementById("volume").textContent = state.volume.toFixed(2);
+      document.getElementById("playback-rate").textContent = state.playbackRate.toFixed(2);
+    });
+
+    player.on("loadedmetadata", () => {
+      document.getElementById("status").textContent = "已加载";
+      console.log("视频元数据加载完成");
+    });
+
+    // 暴露到全局，方便按钮调用
+    window.player = player;
+  </script>
+</body>
+</html>

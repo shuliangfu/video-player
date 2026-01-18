@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>视频播放器 - 播放列表示例</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    #video-container {
+      width: 100%;
+      max-width: 800px;
+      height: 450px;
+      margin: 20px auto;
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .playlist {
+      margin: 20px 0;
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .playlist-item {
+      padding: 10px;
+      margin: 5px 0;
+      background: #f8f9fa;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+    }
+    .playlist-item:hover {
+      background: #e9ecef;
+    }
+    .playlist-item.active {
+      background: #007bff;
+      color: white;
+    }
+    .playlist-item-title {
+      flex: 1;
+      font-weight: bold;
+    }
+    .controls {
+      margin: 20px 0;
+      text-align: center;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      font-size: 16px;
+      cursor: pointer;
+      border: none;
+      border-radius: 4px;
+      background: #007bff;
+      color: white;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <h1>视频播放器 - 播放列表示例</h1>
+
+  <div id="video-container"></div>
+
+  <div class="controls">
+    <button onclick="player.previous()">上一首</button>
+    <button onclick="player.play()">播放</button>
+    <button onclick="player.pause()">暂停</button>
+    <button onclick="player.next()">下一首</button>
+  </div>
+
+  <div class="playlist" id="playlist"></div>
+
+  <script type="module">
+    import { VideoPlayer } from "../src/mod.ts";
+
+    // 播放列表
+    const playlist = [
+      {
+        src: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+        title: "Big Buck Bunny",
+      },
+      {
+        src: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+        title: "Elephants Dream",
+      },
+      {
+        src: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+        title: "For Bigger Blazes",
+      },
+    ];
+
+    // 创建播放器实例
+    const player = new VideoPlayer({
+      container: "#video-container",
+      playlist: playlist,
+      autoplay: false,
+      controls: true,
+    });
+
+    // 渲染播放列表
+    function renderPlaylist() {
+      const playlistEl = document.getElementById("playlist");
+      playlistEl.innerHTML = "";
+
+      playlist.forEach((item, index) => {
+        const itemEl = document.createElement("div");
+        itemEl.className = "playlist-item";
+        if (index === player.getPlaylistIndex()) {
+          itemEl.classList.add("active");
+        }
+        itemEl.innerHTML = `<span class="playlist-item-title">${item.title || `视频 ${index + 1}`}</span>`;
+        itemEl.onclick = () => {
+          player.loadPlaylistItem(index);
+          player.play();
+          renderPlaylist();
+        };
+        playlistEl.appendChild(itemEl);
+      });
+    }
+
+    // 监听播放列表变化
+    player.on("playlistitemchange", () => {
+      renderPlaylist();
+    });
+
+    // 监听播放结束，自动播放下一首
+    player.on("ended", () => {
+      player.next();
+    });
+
+    // 初始渲染
+    renderPlaylist();
+
+    // 暴露到全局
+    window.player = player;
+  </script>
+</body>
+</html>
