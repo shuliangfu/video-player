@@ -1,16 +1,16 @@
 # @dreamer/video-player
 
-> 一个兼容 Deno 和 Bun 的全能视频播放器库，支持多种视频格式和流媒体协议，自动检测格式并选择最佳播放引擎
+> 一个视频播放器库，支持多种视频格式和流媒体协议，自动检测格式并选择最佳播放引擎
 
 [![JSR](https://jsr.io/badges/@dreamer/video-player)](https://jsr.io/@dreamer/video-player)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE.md)
 [![Tests](https://img.shields.io/badge/tests-103%20passed-brightgreen)](./TEST_REPORT.md)
 
 ---
 
 ## 🎯 功能
 
-全能视频播放器库，支持多种视频格式和流媒体协议，自动检测格式并选择最佳播放引擎，提供统一的 API 接口。
+视频播放器库，支持多种视频格式（MP4、WebM、OGG）和流媒体协议（HLS、DASH、FLV、RTMP），自动检测视频格式并选择最佳播放引擎（原生播放器、HLS.js、DASH.js、FLV.js），提供统一的 API 接口。支持自适应码率、低延迟直播、画中画、视频截图等高级功能，全面兼容 Deno、Bun 和浏览器环境。
 
 ---
 
@@ -91,7 +91,7 @@ bunx jsr add @dreamer/video-player@^1.0.0-beta.1
 | 环境 | 版本要求 | 状态 |
 |------|---------|------|
 | **Deno** | 2.6+ | ✅ 完全支持（测试环境） |
-| **Bun** | 1.3.5+ | ✅ 完全支持（测试环境） |
+| **Bun** | 1.3.5 | ✅ 完全支持（测试环境） |
 | **浏览器** | 现代浏览器 | ✅ 完全支持（Chrome、Firefox、Safari、Edge） |
 | **依赖** | - | 📦 需要 `npm:hls.js`、`npm:dashjs`、`npm:flv.js`（可选，根据格式自动加载） |
 

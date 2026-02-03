@@ -2,13 +2,14 @@
  * @fileoverview 工具函数测试
  */
 
-import { describe, expect, it } from "@dreamer/test";
+import { afterEach, beforeEach, describe, expect, it } from "@dreamer/test";
 import {
   detectVideoFormat,
   VideoFormat,
 } from "../src/utils/format-detector.ts";
 import { logger, LogLevel } from "../src/utils/logger.ts";
 import { getNetworkStatus } from "../src/utils/network.ts";
+import { type PlayerSettings, StorageManager } from "../src/utils/storage.ts";
 import { debounce, throttle } from "../src/utils/throttle.ts";
 
 describe("工具函数", () => {
@@ -167,6 +168,91 @@ describe("工具函数", () => {
       expect(typeof logger.info).toBe("function");
       expect(typeof logger.warn).toBe("function");
       expect(typeof logger.error).toBe("function");
+    });
+  });
+
+  describe("StorageManager", () => {
+    /** 测试用 localStorage 模拟 */
+    let mockStorage: Record<string, string>;
+
+    beforeEach(() => {
+      mockStorage = {};
+      const origLocalStorage =
+        (globalThis as unknown as { localStorage?: Storage })
+          .localStorage;
+      (globalThis as unknown as { localStorage: Storage }).localStorage = {
+        getItem: (key: string) => mockStorage[key] ?? null,
+        setItem: (key: string, value: string) => {
+          mockStorage[key] = value;
+        },
+        removeItem: (key: string) => {
+          delete mockStorage[key];
+        },
+        clear: () => {
+          mockStorage = {};
+        },
+        key: (index: number) => Object.keys(mockStorage)[index] ?? null,
+        get length() {
+          return Object.keys(mockStorage).length;
+        },
+      };
+    });
+
+    afterEach(() => {
+      delete (globalThis as unknown as { localStorage?: Storage }).localStorage;
+    });
+
+    it("应该保存并获取播放历史", () => {
+      StorageManager.savePlaybackHistory("https://example.com/v1.mp4", 30, 120);
+      const all = StorageManager.getPlaybackHistory();
+      expect(all.length).toBe(1);
+      expect(all[0].src).toBe("https://example.com/v1.mp4");
+      expect(all[0].position).toBe(30);
+      expect(all[0].duration).toBe(120);
+
+      const bySrc = StorageManager.getPlaybackHistory(
+        "https://example.com/v1.mp4",
+      );
+      expect(bySrc.length).toBe(1);
+      expect(StorageManager.getPlaybackHistory("https://other.com/x.mp4"))
+        .toEqual([]);
+    });
+
+    it("应该获取指定视频的播放位置", () => {
+      StorageManager.savePlaybackHistory("https://example.com/a.mp4", 45);
+      expect(StorageManager.getPlaybackPosition("https://example.com/a.mp4"))
+        .toBe(45);
+      expect(StorageManager.getPlaybackPosition("https://other.com/b.mp4"))
+        .toBeUndefined();
+    });
+
+    it("应该清除播放历史（按 src 或全部）", () => {
+      StorageManager.savePlaybackHistory("https://example.com/v1.mp4", 10);
+      StorageManager.savePlaybackHistory("https://example.com/v2.mp4", 20);
+      StorageManager.clearPlaybackHistory("https://example.com/v1.mp4");
+      expect(StorageManager.getPlaybackHistory().length).toBe(1);
+      StorageManager.clearPlaybackHistory();
+      expect(StorageManager.getPlaybackHistory()).toEqual([]);
+    });
+
+    it("应该保存并获取播放器设置", () => {
+      const settings: PlayerSettings = {
+        volume: 0.8,
+        playbackRate: 1.5,
+        muted: false,
+      };
+      StorageManager.savePlayerSettings(settings);
+      const got = StorageManager.getPlayerSettings();
+      expect(got.volume).toBe(0.8);
+      expect(got.playbackRate).toBe(1.5);
+      expect(got.muted).toBe(false);
+    });
+
+    it("应该清除播放器设置", () => {
+      StorageManager.savePlayerSettings({ volume: 0.5 });
+      StorageManager.clearPlayerSettings();
+      const got = StorageManager.getPlayerSettings();
+      expect(got).toEqual({});
     });
   });
 });

@@ -1,67 +1,381 @@
 /**
- * @fileoverview 使用 Puppeteer 进行浏览器端测试
- * 这些测试需要在真实的浏览器环境中运行
+ * @fileoverview 使用 @dreamer/test 浏览器测试集成进行前端（浏览器）测试
+ *
+ * - entryPoint: tests/browser-entry.ts，打包后挂到 globalThis.VideoPlayer
+ * - browserMode: false 必须，否则输出 ESM + external，浏览器无法解析 jsr:/npm: 会一直卡住
+ * - browser-entry 内需设置 testReady = true，runner 才认为加载完成（见 BROWSER-TEST-ANALYSIS.md）
+ * 首次运行打包可能需数十秒，建议：deno test -A tests/browser.test.ts --timeout=180000
  */
 
+import { RUNTIME } from "@dreamer/runtime-adapter";
 import { describe, expect, it } from "@dreamer/test";
 
-// 注意：这些测试需要使用 Puppeteer 或 Playwright
-// 由于 Deno 测试环境限制，这里提供测试框架和说明
+// 浏览器测试配置：参考 webrtc/tests/browser-puppeteer.test.ts
+// browserMode: false 将 JSR/npm 打进 bundle，避免浏览器里出现 require()
+// 首次运行 createBrowserContext 时会打包入口，可能需 1–2 分钟，故加大超时
+const browserConfig = {
+  // 禁用资源泄漏检查（浏览器测试可能有内部定时器）
+  sanitizeOps: false,
+  sanitizeResources: false,
+  // 单用例超时（含打包 + 启动浏览器 + 加载页面），首次打包较慢
+  timeout: 120_000,
+  browser: {
+    enabled: true,
+    // 使用最小入口避免打包卡住；完整入口 browser-entry.ts 会拉取 mod→npm(hls.js/dashjs/flv.js)，打包阶段易卡死
+    entryPoint: "./tests/browser-entry-minimal.ts",
+    // 全局变量名
+    globalName: "VideoPlayerBundle",
+    // 不把 JSR/npm 标为 external，打进 IIFE，避免浏览器里出现 require()
+    browserMode: false,
+    // 等待 window.VideoPlayerBundle / testReady 的超时，首次打包+加载可能较慢
+    moduleLoadTimeout: 90_000,
+    // 无头模式
+    headless: true,
+    // Chrome 启动参数（视频播放可加 fake media 以兼容无设备环境）
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-gpu",
+      "--use-fake-ui-for-media-stream",
+      "--use-fake-device-for-media-stream",
+    ],
+    // 复用浏览器实例
+    reuseBrowser: true,
+    // 自定义 body 内容
+    bodyContent: `
+      <div id="test-container" style="width: 800px; height: 450px;">
+        <video id="test-video" style="width: 100%; height: 100%;"></video>
+      </div>
+    `,
+  },
+};
 
-describe("VideoPlayer - 浏览器端测试", () => {
-  /**
-   * 测试说明：
-   *
-   * 这些测试需要在真实的浏览器环境中运行，可以使用以下方式：
-   *
-   * 1. 使用 Puppeteer（推荐）
-   *    - 安装：deno add npm:puppeteer
-   *    - 创建测试 HTML 页面
-   *    - 使用 Puppeteer 加载页面并执行测试
-   *
-   * 2. 使用 Playwright
-   *    - 安装：deno add npm:playwright
-   *    - 类似 Puppeteer 的使用方式
-   *
-   * 3. 使用 Deno 的 Web Test Runner
-   *    - 需要配置 Web Test Runner
-   *
-   * 由于当前环境限制，这里提供测试用例框架
-   */
+describe(`VideoPlayer - 前端浏览器测试 (${RUNTIME})`, () => {
+  describe("VideoPlayer 浏览器环境", () => {
+    it(
+      "应该在浏览器中挂载 VideoPlayer 并可用",
+      async (t) => {
+        const result = await (t as {
+          browser?: { evaluate: (fn: () => unknown) => Promise<unknown> };
+        }).browser!.evaluate(() => {
+          const win = globalThis as unknown as {
+            VideoPlayer?: new (
+              opts: { container: string; src?: string },
+            ) => unknown;
+            playerReady?: boolean;
+          };
+          if (typeof win.VideoPlayer === "undefined") {
+            return { success: false, error: "VideoPlayer 未定义" };
+          }
+          try {
+            return {
+              success: true,
+              hasVideoPlayer: typeof win.VideoPlayer === "function",
+              playerReady: win.playerReady === true,
+            };
+          } catch (err: unknown) {
+            return {
+              success: false,
+              error: err instanceof Error ? err.message : String(err),
+            };
+          }
+        });
+        const r = result as {
+          success: boolean;
+          error?: string;
+          hasVideoPlayer?: boolean;
+          playerReady?: boolean;
+        };
+        expect(r.success).toBe(true);
+        expect(r.hasVideoPlayer).toBe(true);
+        expect(r.playerReady).toBe(true);
+      },
+      browserConfig,
+    );
 
-  it("应该在浏览器中创建播放器实例", async () => {
-    // TODO: 使用 Puppeteer 加载测试页面并验证
-    // const browser = await puppeteer.launch();
-    // const page = await browser.newPage();
-    // await page.goto('http://localhost:8000/test.html');
-    // const result = await page.evaluate(() => {
-    //   const player = new VideoPlayer({ container: '#test-container', src: 'test.mp4' });
-    //   return player !== null;
-    // });
-    // expect(result).toBe(true);
-    // await browser.close();
+    it(
+      "应该在浏览器中创建播放器实例并具备 play/pause/seek",
+      async (t) => {
+        const result = await (t as {
+          browser?: { evaluate: (fn: () => unknown) => Promise<unknown> };
+        }).browser!.evaluate(() => {
+          const win = globalThis as unknown as {
+            VideoPlayer?: new (opts: { container: string; src?: string }) => {
+              play?: () => Promise<unknown>;
+              pause?: () => void;
+              seek?: (time: number) => void;
+            };
+          };
+          if (typeof win.VideoPlayer === "undefined") {
+            return { success: false, error: "VideoPlayer 未定义" };
+          }
+          try {
+            const player = new win.VideoPlayer!({
+              container: "#test-container",
+              src: "https://example.com/test.mp4",
+            });
+            return {
+              success: true,
+              hasPlay: typeof player.play === "function",
+              hasPause: typeof player.pause === "function",
+              hasSeek: typeof player.seek === "function",
+            };
+          } catch (err: unknown) {
+            return {
+              success: false,
+              error: err instanceof Error ? err.message : String(err),
+            };
+          }
+        });
+        const r = result as {
+          success: boolean;
+          error?: string;
+          hasPlay?: boolean;
+          hasPause?: boolean;
+          hasSeek?: boolean;
+        };
+        expect(r.success).toBe(true);
+        expect(r.hasPlay).toBe(true);
+        expect(r.hasPause).toBe(true);
+        expect(r.hasSeek).toBe(true);
+      },
+      browserConfig,
+    );
 
-    // 临时跳过，等待 Puppeteer 集成
-    expect(true).toBe(true);
-  });
+    it(
+      "应该支持音量与倍速控制",
+      async (t) => {
+        const result = await (t as {
+          browser?: { evaluate: (fn: () => unknown) => Promise<unknown> };
+        }).browser!.evaluate(() => {
+          const win = globalThis as unknown as {
+            VideoPlayer?: new (opts: { container: string; src?: string }) => {
+              setVolume?: (v: number) => void;
+              setPlaybackRate?: (r: number) => void;
+              volume?: number;
+              playbackRate?: number;
+            };
+          };
+          if (typeof win.VideoPlayer === "undefined") {
+            return { success: false, error: "VideoPlayer 未定义" };
+          }
+          try {
+            const player = new win.VideoPlayer!({
+              container: "#test-container",
+              src: "https://example.com/test.mp4",
+            });
+            if (typeof player.setVolume === "function") {
+              player.setVolume(0.5);
+            }
+            if (typeof player.setPlaybackRate === "function") {
+              player.setPlaybackRate(1.5);
+            }
+            return {
+              success: true,
+              hasSetVolume: typeof player.setVolume === "function",
+              hasSetPlaybackRate: typeof player.setPlaybackRate === "function",
+              volume: (player as { volume?: number }).volume,
+              playbackRate: (player as { playbackRate?: number }).playbackRate,
+            };
+          } catch (err: unknown) {
+            return {
+              success: false,
+              error: err instanceof Error ? err.message : String(err),
+            };
+          }
+        });
+        const r = result as {
+          success: boolean;
+          error?: string;
+          hasSetVolume?: boolean;
+          hasSetPlaybackRate?: boolean;
+          volume?: number;
+          playbackRate?: number;
+        };
+        expect(r.success).toBe(true);
+        expect(r.hasSetVolume).toBe(true);
+        expect(r.hasSetPlaybackRate).toBe(true);
+      },
+      browserConfig,
+    );
 
-  it("应该在浏览器中播放视频", async () => {
-    // TODO: 使用 Puppeteer 测试播放功能
-    expect(true).toBe(true);
-  });
+    it(
+      "应该支持全屏与画中画 API 检测",
+      async (t) => {
+        const result = await (t as {
+          browser?: { evaluate: (fn: () => unknown) => Promise<unknown> };
+        }).browser!.evaluate(() => {
+          const win = globalThis as unknown as {
+            VideoPlayer?: new (opts: { container: string; src?: string }) => {
+              requestFullscreen?: () => Promise<unknown>;
+              isFullscreen?: () => boolean;
+              enterPictureInPicture?: () => Promise<unknown>;
+              isPictureInPictureSupported?: () => boolean;
+            };
+          };
+          if (typeof win.VideoPlayer === "undefined") {
+            return { success: false, error: "VideoPlayer 未定义" };
+          }
+          try {
+            const player = new win.VideoPlayer!({
+              container: "#test-container",
+              src: "https://example.com/test.mp4",
+            });
+            return {
+              success: true,
+              hasRequestFullscreen:
+                typeof player.requestFullscreen === "function",
+              hasIsFullscreen: typeof player.isFullscreen === "function",
+              hasEnterPiP: typeof player.enterPictureInPicture === "function",
+              hasIsPiPSupported:
+                typeof player.isPictureInPictureSupported === "function",
+            };
+          } catch (err: unknown) {
+            return {
+              success: false,
+              error: err instanceof Error ? err.message : String(err),
+            };
+          }
+        });
+        const r = result as {
+          success: boolean;
+          error?: string;
+          hasRequestFullscreen?: boolean;
+          hasIsFullscreen?: boolean;
+          hasEnterPiP?: boolean;
+          hasIsPiPSupported?: boolean;
+        };
+        expect(r.success).toBe(true);
+        expect(r.hasRequestFullscreen).toBe(true);
+        expect(r.hasIsFullscreen).toBe(true);
+        expect(r.hasEnterPiP).toBe(true);
+        expect(r.hasIsPiPSupported).toBe(true);
+      },
+      browserConfig,
+    );
 
-  it("应该在浏览器中测试全屏功能", async () => {
-    // TODO: 使用 Puppeteer 测试全屏 API
-    expect(true).toBe(true);
-  });
+    it(
+      "应该支持截图与事件 on/off",
+      async (t) => {
+        const result = await (t as {
+          browser?: { evaluate: (fn: () => unknown) => Promise<unknown> };
+        }).browser!.evaluate(() => {
+          const win = globalThis as unknown as {
+            VideoPlayer?: new (opts: { container: string; src?: string }) => {
+              captureFrame?: () => string;
+              on?: (event: string, fn: () => void) => void;
+              off?: (event: string, fn: () => void) => void;
+            };
+          };
+          if (typeof win.VideoPlayer === "undefined") {
+            return { success: false, error: "VideoPlayer 未定义" };
+          }
+          try {
+            const player = new win.VideoPlayer!({
+              container: "#test-container",
+              src: "https://example.com/test.mp4",
+            });
+            const imageData = typeof player.captureFrame === "function"
+              ? player.captureFrame()
+              : "";
+            return {
+              success: true,
+              hasCaptureFrame: typeof player.captureFrame === "function",
+              isDataURL: typeof imageData === "string" &&
+                imageData.startsWith("data:image/"),
+              hasOn: typeof player.on === "function",
+              hasOff: typeof player.off === "function",
+            };
+          } catch (err: unknown) {
+            return {
+              success: false,
+              error: err instanceof Error ? err.message : String(err),
+            };
+          }
+        });
+        const r = result as {
+          success: boolean;
+          error?: string;
+          hasCaptureFrame?: boolean;
+          isDataURL?: boolean;
+          hasOn?: boolean;
+          hasOff?: boolean;
+        };
+        expect(r.success).toBe(true);
+        expect(r.hasCaptureFrame).toBe(true);
+        expect(r.hasOn).toBe(true);
+        expect(r.hasOff).toBe(true);
+      },
+      browserConfig,
+    );
 
-  it("应该在浏览器中测试画中画功能", async () => {
-    // TODO: 使用 Puppeteer 测试画中画 API
-    expect(true).toBe(true);
-  });
-
-  it("应该在浏览器中测试截图功能", async () => {
-    // TODO: 使用 Puppeteer 测试截图功能
-    expect(true).toBe(true);
+    it(
+      "应该支持播放列表与 getPerformanceData",
+      async (t) => {
+        const result = await (t as {
+          browser?: { evaluate: (fn: () => unknown) => Promise<unknown> };
+        }).browser!.evaluate(() => {
+          const win = globalThis as unknown as {
+            VideoPlayer?: new (opts: {
+              container: string;
+              playlist?: { src: string; title: string }[];
+            }) => {
+              getPlaylist?: () => { src: string; title: string }[];
+              next?: () => boolean;
+              previous?: () => boolean;
+              getPerformanceData?: () => { fps?: number };
+            };
+          };
+          if (typeof win.VideoPlayer === "undefined") {
+            return { success: false, error: "VideoPlayer 未定义" };
+          }
+          try {
+            const player = new win.VideoPlayer!({
+              container: "#test-container",
+              playlist: [
+                { src: "https://example.com/v1.mp4", title: "视频 1" },
+                { src: "https://example.com/v2.mp4", title: "视频 2" },
+              ],
+            });
+            const playlist = typeof player.getPlaylist === "function"
+              ? player.getPlaylist!()
+              : [];
+            const perf = typeof player.getPerformanceData === "function"
+              ? player.getPerformanceData!()
+              : {};
+            return {
+              success: true,
+              playlistLength: playlist.length,
+              hasNext: typeof player.next === "function",
+              hasPrevious: typeof player.previous === "function",
+              hasGetPerformanceData:
+                typeof player.getPerformanceData === "function",
+              hasFps: typeof (perf as { fps?: number }).fps === "number",
+            };
+          } catch (err: unknown) {
+            return {
+              success: false,
+              error: err instanceof Error ? err.message : String(err),
+            };
+          }
+        });
+        const r = result as {
+          success: boolean;
+          error?: string;
+          playlistLength?: number;
+          hasNext?: boolean;
+          hasPrevious?: boolean;
+          hasGetPerformanceData?: boolean;
+          hasFps?: boolean;
+        };
+        expect(r.success).toBe(true);
+        expect(r.playlistLength).toBe(2);
+        expect(r.hasNext).toBe(true);
+        expect(r.hasPrevious).toBe(true);
+        expect(r.hasGetPerformanceData).toBe(true);
+      },
+      browserConfig,
+    );
   });
 });
