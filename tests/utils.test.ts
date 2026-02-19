@@ -203,6 +203,8 @@ describe("工具函数", () => {
     });
 
     it("应该保存并获取播放历史", () => {
+      // 先清空，避免其它用例或并行/顺序导致的历史残留
+      StorageManager.clearPlaybackHistory();
       StorageManager.savePlaybackHistory("https://example.com/v1.mp4", 30, 120);
       const all = StorageManager.getPlaybackHistory();
       expect(all.length).toBe(1);

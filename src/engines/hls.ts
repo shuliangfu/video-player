@@ -100,14 +100,14 @@ export class HLSPlayerEngine extends BasePlayerEngine {
       // 如果 hls.js 未加载，检查 Safari 原生支持
       return typeof document !== "undefined" &&
         document.createElement("video").canPlayType(
-          "application/vnd.apple.mpegurl",
-        ) !== "";
+            "application/vnd.apple.mpegurl",
+          ) !== "";
     } catch {
       // 如果 hls.js 未加载，检查 Safari 原生支持
       return typeof document !== "undefined" &&
         document.createElement("video").canPlayType(
-          "application/vnd.apple.mpegurl",
-        ) !== "";
+            "application/vnd.apple.mpegurl",
+          ) !== "";
     }
   }
 
@@ -161,7 +161,7 @@ export class HLSPlayerEngine extends BasePlayerEngine {
           this.emit("loadedmetadata");
         });
 
-              this.hls.on(Hls.Events.ERROR, (_event: any, data: any) => {
+        this.hls.on(Hls.Events.ERROR, (_event: any, data: any) => {
           if (data.fatal) {
             switch (data.type) {
               case Hls.ErrorTypes.NETWORK_ERROR:

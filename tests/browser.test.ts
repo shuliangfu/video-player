@@ -1,14 +1,27 @@
 /**
  * @fileoverview 使用 @dreamer/test 浏览器测试集成进行前端（浏览器）测试
  *
- * - entryPoint: tests/browser-entry.ts，打包后挂到 globalThis.VideoPlayer
+ * - entryPoint: 使用与本文件同目录的 browser-entry-minimal.ts（占位类），避免完整入口拉取 hls.js/dashjs/flv.js 时打包卡死；打包后挂到 globalThis.VideoPlayerBundle 与 globalThis.VideoPlayer
+ * - 入口路径按「当前测试文件所在目录」解析，这样无论从 video-player 还是 monorepo 根目录运行测试都能找到正确文件，避免卡在 waitForFunction
+ * - globalName: "VideoPlayerBundle"，须与入口内挂载的变量名一致，runner 会等待 window[globalName] 与 window.testReady === true
  * - browserMode: false 必须，否则输出 ESM + external，浏览器无法解析 jsr:/npm: 会一直卡住
- * - browser-entry 内需设置 testReady = true，runner 才认为加载完成（见 BROWSER-TEST-ANALYSIS.md）
+ * - 入口内需设置 testReady = true，runner 才认为加载完成
  * 首次运行打包可能需数十秒，建议：deno test -A tests/browser.test.ts --timeout=180000
  */
 
-import { RUNTIME } from "@dreamer/runtime-adapter";
-import { describe, expect, it } from "@dreamer/test";
+import { dirname, resolve, RUNTIME } from "@dreamer/runtime-adapter";
+import {
+  afterAll,
+  cleanupAllBrowsers,
+  describe,
+  expect,
+  it,
+} from "@dreamer/test";
+import { fileURLToPath } from "node:url";
+
+// 按当前测试文件所在目录解析入口，避免从 monorepo 根目录运行时 "./tests/..." 解析到错误路径导致卡住
+const _testDir = dirname(fileURLToPath(import.meta.url));
+const _entryPoint = resolve(_testDir, "browser-entry-minimal.ts");
 
 // 浏览器测试配置：参考 webrtc/tests/browser-puppeteer.test.ts
 // browserMode: false 将 JSR/npm 打进 bundle，避免浏览器里出现 require()
@@ -21,8 +34,9 @@ const browserConfig = {
   timeout: 120_000,
   browser: {
     enabled: true,
-    // 使用最小入口避免打包卡住；完整入口 browser-entry.ts 会拉取 mod→npm(hls.js/dashjs/flv.js)，打包阶段易卡死
-    entryPoint: "./tests/browser-entry-minimal.ts",
+    browserSource: "test" as const,
+    // 使用与 browser.test.ts 同目录的入口，不依赖 cwd，从任意目录运行都不会卡住
+    entryPoint: _entryPoint,
     // 全局变量名
     globalName: "VideoPlayerBundle",
     // 不把 JSR/npm 标为 external，打进 IIFE，避免浏览器里出现 require()
@@ -31,15 +45,6 @@ const browserConfig = {
     moduleLoadTimeout: 90_000,
     // 无头模式
     headless: true,
-    // Chrome 启动参数（视频播放可加 fake media 以兼容无设备环境）
-    args: [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-      "--disable-gpu",
-      "--use-fake-ui-for-media-stream",
-      "--use-fake-device-for-media-stream",
-    ],
     // 复用浏览器实例
     reuseBrowser: true,
     // 自定义 body 内容
@@ -52,6 +57,10 @@ const browserConfig = {
 };
 
 describe(`VideoPlayer - 前端浏览器测试 (${RUNTIME})`, () => {
+  afterAll(async () => {
+    await cleanupAllBrowsers();
+  });
+
   describe("VideoPlayer 浏览器环境", () => {
     it(
       "应该在浏览器中挂载 VideoPlayer 并可用",

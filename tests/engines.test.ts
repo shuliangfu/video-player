@@ -55,9 +55,13 @@ describe("PlayerEngineFactory", () => {
     }
 
     const video = document.createElement("video");
-    const engine = PlayerEngineFactory.create(video, "https://example.com/video.mp4", {
-      autoDetectFormat: true,
-    });
+    const engine = PlayerEngineFactory.create(
+      video,
+      "https://example.com/video.mp4",
+      {
+        autoDetectFormat: true,
+      },
+    );
 
     expect(engine).toBeDefined();
     expect(typeof engine.load).toBe("function");
@@ -100,9 +104,13 @@ describe("PlayerEngineFactory", () => {
     }
 
     const video = document.createElement("video");
-    const engine = PlayerEngineFactory.create(video, "https://example.com/video.m3u8", {
-      fallbackToNative: true,
-    });
+    const engine = PlayerEngineFactory.create(
+      video,
+      "https://example.com/video.m3u8",
+      {
+        fallbackToNative: true,
+      },
+    );
 
     expect(engine).toBeDefined();
   });
@@ -113,9 +121,13 @@ describe("PlayerEngineFactory", () => {
     }
 
     const video = document.createElement("video");
-    const engine = PlayerEngineFactory.create(video, "https://example.com/video.mp4", {
-      autoDetectFormat: false,
-    });
+    const engine = PlayerEngineFactory.create(
+      video,
+      "https://example.com/video.mp4",
+      {
+        autoDetectFormat: false,
+      },
+    );
 
     expect(engine).toBeDefined();
   });
