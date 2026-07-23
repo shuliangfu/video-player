@@ -274,14 +274,20 @@ function setupMockDOM() {
       removeEventListener: () => {},
     };
 
-    (globalThis as any).URL = {
-      createObjectURL: () => "blob:mock-url",
-      revokeObjectURL: () => {},
-    };
+    // Augment URL with static blob methods instead of replacing the constructor.
+    // Replacing globalThis.URL breaks `new URL()` in other test files that run
+    // in the same process (Bun runs all test files in one process).
+    const URLImpl = globalThis.URL;
+    if (typeof URLImpl.createObjectURL !== "function") {
+      URLImpl.createObjectURL = () => "blob:mock-url";
+      URLImpl.revokeObjectURL = () => {};
+    }
 
-    (globalThis as any).performance = {
-      now: () => Date.now(),
-    };
+    // Augment rather than replace — Bun/Node provide `performance`; replacing
+    // it leaks across test files in Bun's single-process model.
+    if (typeof globalThis.performance?.now !== "function") {
+      (globalThis as any).performance = { now: () => Date.now() };
+    }
 
     Object.defineProperty(globalThis, "navigator", {
       value: {

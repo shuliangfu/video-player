@@ -150,11 +150,16 @@ function setupMockDOM() {
       addEventListener: () => {},
       removeEventListener: () => {},
     };
-    (globalThis as any).URL = {
-      createObjectURL: () => "blob:mock",
-      revokeObjectURL: () => {},
-    };
-    (globalThis as any).performance = { now: () => Date.now() };
+    // Augment URL with static blob methods instead of replacing the constructor
+    // (replacing it breaks `new URL()` in other test files; Bun runs all in one process).
+    const URLImpl = globalThis.URL;
+    if (typeof URLImpl.createObjectURL !== "function") {
+      URLImpl.createObjectURL = () => "blob:mock";
+      URLImpl.revokeObjectURL = () => {};
+    }
+    if (typeof globalThis.performance?.now !== "function") {
+      (globalThis as any).performance = { now: () => Date.now() };
+    }
     Object.defineProperty(globalThis, "navigator", {
       value: {
         connection: {
