@@ -19,6 +19,19 @@ function setupMockDOM() {
     !document.createElement;
 
   if (needsMock) {
+    // Node's globalThis is not an EventTarget; polyfill addEventListener/removeEventListener
+    if (typeof globalThis.addEventListener !== "function") {
+      Object.defineProperty(globalThis, "addEventListener", {
+        value: () => {},
+        configurable: true,
+        writable: true,
+      });
+      Object.defineProperty(globalThis, "removeEventListener", {
+        value: () => {},
+        configurable: true,
+        writable: true,
+      });
+    }
     // 首先定义 HTMLCanvasElement 类（需要在 createElement 之前）
     (globalThis as any).HTMLCanvasElement = class {
       width = 0;
@@ -270,18 +283,22 @@ function setupMockDOM() {
       now: () => Date.now(),
     };
 
-    (globalThis as any).navigator = {
-      onLine: true,
-      connection: {
-        effectiveType: "4g",
-        saveData: false,
-        online: true,
-        downlink: 10,
-        rtt: 50,
-        addEventListener: () => {},
-        removeEventListener: () => {},
+    Object.defineProperty(globalThis, "navigator", {
+      value: {
+        onLine: true,
+        connection: {
+          effectiveType: "4g",
+          saveData: false,
+          online: true,
+          downlink: 10,
+          rtt: 50,
+          addEventListener: () => {},
+          removeEventListener: () => {},
+        },
       },
-    };
+      configurable: true,
+      writable: true,
+    });
 
     (globalThis as any).fetch = async () => ({
       ok: true,

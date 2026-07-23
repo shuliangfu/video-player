@@ -7,6 +7,56 @@
 
 ---
 
+## [1.1.0] - 2026-07-23
+
+### 新增
+
+- **Node.js 22+ 兼容**：第三个支持的运行时（与 Deno、Bun 并列）。包现在附带
+  `package.json`（零运行时依赖——`src/` 无依赖）、`tsconfig.json` 和 `test:node`
+  任务（`tsx --test --test-force-exit`），单元测试套件可在 Node 22 下运行。
+- **`@dreamer/test` 支持 Node**：单元测试在三端均通过 `@dreamer/test` 运行。
+- **`.npmrc`**：`@jsr:registry=https://npm.jsr.io`，使 `npm`/`bun` 能解析
+  `npm:@jsr/dreamer__*` 别名。
+
+### 变更
+
+- **测试 mock 针对 Node 加固**：`navigator` 改用 `Object.defineProperty` 安装
+  （Node 22+ 将 `navigator` 暴露为只读 getter，严格模式下直接赋值会抛错）。
+  `setupMockDOM` 中补全 `globalThis.addEventListener`/`removeEventListener`
+  polyfill，因为 Node 的 `globalThis` 不是 `EventTarget`（播放器在 `globalThis`
+  上注册 `online`/`offline` 监听器）。
+- **`src/` 无需修改**：所有浏览器全局变量（`document`/`window`/
+  `HTMLVideoElement`）均在类方法内守卫，因此模块可在 Node 中无头导入。定时器字段
+  保留原始 `number` 类型与 `as unknown as number` 转换（Deno 的 Node 兼容全局使
+  `ReturnType<typeof setTimeout>` 解析为 `Timeout`，与调用处的 `number` 冲突）。
+- **升级依赖**：`@dreamer/runtime-adapter` → `^1.2.2`、`@dreamer/logger` →
+  `^1.1.0`、`@dreamer/test` → `^1.2.3`。
+- **移除 `package.json` 运行时依赖**：`hls.js`/`dashjs`/`flv.js` 保留在
+  `deno.json` imports 中（供本地浏览器测试使用），但从 `package.json` 依赖中移除
+  ——`src/` 通过 `window.Hls`/`flvjs` 全局加载它们，从不导入。
+- **`deno.json` 新增 `minimumDependencyAge: 0`**。
+
+### CI
+
+- 9 任务矩阵（Deno 2.9 / Bun 1.3 / Node 22 × Linux/macOS/Windows），仅运行 4 个
+  单元测试套件（`engines`、`player`、`integration`、`utils`）。不安装 Chromium。
+  Playwright 浏览器测试（`tests/browser.test.ts`）拆分为本地 `test:browser` 任务，
+  不纳入 CI。
+
+### 测试
+
+- **三端单元测试套件**：Deno 98 通过（94 单元 + 4 生命周期钩子）/ Bun 94 通过 /
+  Node 94 通过——100% 通过率。
+
+### 兼容性
+
+- **Deno**：2.6+
+- **Bun**：1.3+
+- **Node.js**：22+（自 v1.1.0）
+- **浏览器**：支持 ES2020 的现代浏览器，并按格式提供所需编解码器/API 支持。
+
+---
+
 ## [1.0.0] - 2026-02-20
 
 ### 新增

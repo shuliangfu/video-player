@@ -7,6 +7,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.1.0] - 2026-07-23
+
+### Added
+
+- **Node.js 22+ compatibility**: Third supported runtime, alongside Deno and
+  Bun. The package now ships a `package.json` (zero runtime dependencies —
+  `src/` is dependency-free), a `tsconfig.json`, and a `test:node` task
+  (`tsx --test --test-force-exit`) so the unit suite runs under Node 22.
+- **`@dreamer/test` is Node-compatible**: unit tests run via
+  `@dreamer/test` across all three runtimes.
+- **`.npmrc`** with `@jsr:registry=https://npm.jsr.io` so `npm`/`bun` resolve
+  the `npm:@jsr/dreamer__*` aliases.
+
+### Changed
+
+- **Test mocks hardened for Node**: `navigator` is now installed via
+  `Object.defineProperty` (Node 22+ exposes `navigator` as a read-only getter,
+  so direct assignment throws in strict mode). `globalThis.addEventListener`/
+  `removeEventListener` are polyfilled in `setupMockDOM` because Node's
+  `globalThis` is not an `EventTarget` (the player wires `online`/`offline`
+  listeners on `globalThis`).
+- **No `src/` changes needed**: all browser globals (`document`/`window`/
+  `HTMLVideoElement`) are guarded inside class methods, so the module imports
+  headless in Node. Timer fields keep their original `number` type with
+  `as unknown as number` casts (Deno's Node-compat globals make
+  `ReturnType<typeof setTimeout>` resolve to `Timeout`, conflicting with the
+  call-site `number`).
+- **Upgraded dependencies**: `@dreamer/runtime-adapter` → `^1.2.2`,
+  `@dreamer/logger` → `^1.1.0`, `@dreamer/test` → `^1.2.3`.
+- **`package.json` runtime deps removed**: `hls.js`/`dashjs`/`flv.js` are kept
+  in `deno.json` imports (for the local browser test) but removed from
+  `package.json` dependencies — `src/` loads them via `window.Hls`/`flvjs`
+  globals, never imports them.
+- **`minimumDependencyAge: 0`** added to `deno.json`.
+
+### CI
+
+- 9-job matrix (Deno 2.9 / Bun 1.3 / Node 22 × Linux/macOS/Windows) running
+  the 4 unit suites (`engines`, `player`, `integration`, `utils`). No Chromium
+  install. The Playwright browser test (`tests/browser.test.ts`) is split into
+  the local `test:browser` task and excluded from CI.
+
+### Tests
+
+- **3-runtime unit suite**: Deno 98 passed (94 unit + 4 lifecycle hooks) /
+  Bun 94 passed / Node 94 passed — 100% pass rate.
+
+### Compatibility
+
+- **Deno**: 2.6+
+- **Bun**: 1.3+
+- **Node.js**: 22+ (since v1.1.0)
+- **Browsers**: Modern browsers with ES2020 support and required codec/API
+  support per format.
+
+---
+
 ## [1.0.0] - 2026-02-20
 
 ### Added

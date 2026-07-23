@@ -119,16 +119,20 @@ describe("工具函数", () => {
     it("应该获取网络状态", () => {
       // Mock navigator（如果不存在）
       const originalNavigator = (globalThis as any).navigator;
-      (globalThis as any).navigator = {
-        onLine: true,
-        connection: {
-          effectiveType: "4g",
-          saveData: false,
-          online: true,
-          downlink: 10,
-          rtt: 50,
+      Object.defineProperty(globalThis, "navigator", {
+        value: {
+          onLine: true,
+          connection: {
+            effectiveType: "4g",
+            saveData: false,
+            online: true,
+            downlink: 10,
+            rtt: 50,
+          },
         },
-      };
+        configurable: true,
+        writable: true,
+      });
 
       try {
         const status = getNetworkStatus();

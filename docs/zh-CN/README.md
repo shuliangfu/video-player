@@ -6,7 +6,7 @@
 
 [![JSR](https://jsr.io/badges/@dreamer/video-player)](https://jsr.io/@dreamer/video-player)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](../../LICENSE)
-[![Tests](https://img.shields.io/badge/tests-103%20passed-brightgreen)](./TEST_REPORT.md)
+[![Tests](https://img.shields.io/badge/tests-94%20passed%20(3%20runtimes)-brightgreen)](./TEST_REPORT.md)
 
 ---
 
@@ -14,7 +14,7 @@
 
 视频播放器包，支持多种视频格式（MP4、WebM、OGG）和流媒体协议（HLS、DASH、FLV、RTMP），自动检测视频格式并选择最佳播放引擎（原生播放器、HLS.js、DASH.js、FLV.js），提供统一的
 API 接口。支持自适应码率、低延迟直播、画中画、视频截图等高级功能，全面兼容
-Deno、Bun 和浏览器环境。
+Deno、Bun、Node.js 22+ 和浏览器环境。
 
 ---
 
@@ -89,6 +89,18 @@ deno add jsr:@dreamer/video-player
 bunx jsr add @dreamer/video-player
 ```
 
+### Node.js 22+
+
+```bash
+npx jsr add @dreamer/video-player
+```
+
+> `src/` 为零依赖：仅使用类方法内守卫的浏览器全局变量
+> （`document`/`window`/`HTMLVideoElement`），因此模块可在 Node.js 中无头加载（用于
+> SSR/导入）。实例化需要浏览器（或 mock DOM）。npm 引擎
+> （`hls.js`/`dashjs`/`flv.js`）在浏览器中通过 `window.Hls`/`flvjs` 全局加载，未在
+> `src/` 中导入，因此 `package.json` 不附带运行时依赖。
+
 ---
 
 ## 🌍 环境兼容性
@@ -96,7 +108,8 @@ bunx jsr add @dreamer/video-player
 | 环境       | 版本要求   | 状态                                                                       |
 | ---------- | ---------- | -------------------------------------------------------------------------- |
 | **Deno**   | 2.6+       | ✅ 完全支持（测试环境）                                                    |
-| **Bun**    | 1.3.5      | ✅ 完全支持（测试环境）                                                    |
+| **Bun**    | 1.3+       | ✅ 完全支持（测试环境）                                                    |
+| **Node.js**| 22+        | ✅ 完全支持（自 v1.1.0；测试环境，src 可无头导入）                         |
 | **浏览器** | 现代浏览器 | ✅ 完全支持（Chrome、Firefox、Safari、Edge）                               |
 | **依赖**   | -          | 📦 需要 `npm:hls.js`、`npm:dashjs`、`npm:flv.js`（可选，根据格式自动加载） |
 

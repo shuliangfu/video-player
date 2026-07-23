@@ -17,6 +17,19 @@ function setupMockDOM() {
     !document.createElement;
 
   if (needsMock) {
+    // Node's globalThis is not an EventTarget; polyfill addEventListener/removeEventListener
+    if (typeof globalThis.addEventListener !== "function") {
+      Object.defineProperty(globalThis, "addEventListener", {
+        value: () => {},
+        configurable: true,
+        writable: true,
+      });
+      Object.defineProperty(globalThis, "removeEventListener", {
+        value: () => {},
+        configurable: true,
+        writable: true,
+      });
+    }
     (globalThis as any).document = {
       createElement: (tag: string) => {
         const element: any = {
@@ -142,18 +155,22 @@ function setupMockDOM() {
       revokeObjectURL: () => {},
     };
     (globalThis as any).performance = { now: () => Date.now() };
-    (globalThis as any).navigator = {
-      connection: {
-        effectiveType: "4g",
-        saveData: false,
-        online: true,
-        downlink: 10,
-        rtt: 50,
-        addEventListener: () => {},
-        removeEventListener: () => {},
+    Object.defineProperty(globalThis, "navigator", {
+      value: {
+        connection: {
+          effectiveType: "4g",
+          saveData: false,
+          online: true,
+          downlink: 10,
+          rtt: 50,
+          addEventListener: () => {},
+          removeEventListener: () => {},
+        },
+        onLine: true,
       },
-      onLine: true,
-    };
+      configurable: true,
+      writable: true,
+    });
   }
 }
 

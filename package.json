@@ -1,0 +1,32 @@
+{
+  "name": "@dreamer/video-player",
+  "version": "1.1.0",
+  "description": "HTML5 video player (HLS/DASH/FLV) for Deno, Bun and Node.js.",
+  "type": "module",
+  "license": "Apache-2.0",
+  "exports": {
+    ".": "./src/mod.ts",
+    "./player": "./src/player.ts"
+  },
+  "scripts": {
+    "test": "bun test tests/engines.test.ts tests/player.test.ts tests/integration.test.ts tests/utils.test.ts",
+    "test:browser": "deno test --allow-all tests/browser.test.ts",
+    "test:node": "tsx --tsconfig tsconfig.json --test --test-force-exit tests/engines.test.ts tests/player.test.ts tests/integration.test.ts tests/utils.test.ts",
+    "check": "deno check src/mod.ts src/player.ts"
+  },
+  "devDependencies": {
+    "@dreamer/test": "npm:@jsr/dreamer__test@^1.2.3",
+    "tsx": "^4.19.2"
+  },
+  "engines": {
+    "bun": ">=1.3",
+    "node": ">=22"
+  },
+  "keywords": [
+    "video-player",
+    "hls",
+    "dash",
+    "flv",
+    "dreamer"
+  ]
+}
