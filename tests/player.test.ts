@@ -12,13 +12,12 @@ const mockElements: Map<string, any> = new Map();
 
 // Mock DOM 环境（如果不可用或不完整）
 function setupMockDOM() {
-  // 在 Bun 环境中，document 可能存在但不完整，需要强制替换
-  const needsMock = typeof document === "undefined" ||
-    !document.querySelector ||
-    !document.body ||
-    !document.createElement;
-
-  if (needsMock) {
+  // Always (re)install the full DOM mock. Under Bun, @dreamer/test runs every
+  // test file in a single process with shared globals; a document mock leaked
+  // from another file would make a completeness check falsely pass and skip
+  // this setup, leaving tests without canvas/localStorage support.
+  // Reinstalling on every call is cheap and deterministic.
+  {
     // Node's globalThis is not an EventTarget; polyfill addEventListener/removeEventListener
     if (typeof globalThis.addEventListener !== "function") {
       Object.defineProperty(globalThis, "addEventListener", {
